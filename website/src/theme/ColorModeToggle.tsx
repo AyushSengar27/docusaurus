@@ -20,29 +20,35 @@ import {
 } from '@site/src/utils/colorUtils';
 import type {Props} from '@theme/ColorModeToggle';
 
-// The ColorGenerator modifies the DOM styles. The styles are persisted in
-// session storage, and we need to apply the same style when toggling modes even
-// when we are not on the styling-layout page. The only way to do this so far is
-// by hooking into the Toggle component.
+// This component wraps the ColorModeToggle and applies custom styles
+// when toggling between dark and light modes. It ensures that color
+// preferences are persisted between sessions.
 export default function ColorModeToggle(props: Props): JSX.Element {
-  return (
-    <OriginalToggle
-      {...props}
-      onChange={(colorMode) => {
-        props.onChange(colorMode);
-        const isDarkMode = colorMode === 'dark';
-        const storage = isDarkMode ? darkStorage : lightStorage;
-        const colorState = (JSON.parse(
-          storage.get() ?? 'null',
-        ) as ColorState | null) ?? {
-          baseColor: isDarkMode ? DARK_PRIMARY_COLOR : LIGHT_PRIMARY_COLOR,
-          background: isDarkMode
-            ? DARK_BACKGROUND_COLOR
-            : LIGHT_BACKGROUND_COLOR,
-          shades: COLOR_SHADES,
-        };
-        updateDOMColors(colorState, isDarkMode);
-      }}
-    />
-  );
+  const handleColorModeChange = (colorMode: string) => {
+    // Call the original onChange handler passed via props
+    props.onChange(colorMode);
+
+    // Determine whether dark mode is active
+    const isDarkModeEnabled = colorMode === 'dark';
+
+    // Select the appropriate storage for the mode
+    const storage = isDarkModeEnabled ? darkStorage : lightStorage;
+
+    // Attempt to retrieve the stored color state from session storage
+    const colorState = JSON.parse(storage.get() ?? 'null') as ColorState | null;
+
+    // Use default color state if none is found in storage
+    const finalColorState = colorState ?? {
+      baseColor: isDarkModeEnabled ? DARK_PRIMARY_COLOR : LIGHT_PRIMARY_COLOR,
+      background: isDarkModeEnabled
+        ? DARK_BACKGROUND_COLOR
+        : LIGHT_BACKGROUND_COLOR,
+      shades: COLOR_SHADES,
+    };
+
+    // Update the DOM colors using the resolved color state
+    updateDOMColors(finalColorState, isDarkModeEnabled);
+  };
+
+  return <OriginalToggle {...props} onChange={handleColorModeChange} />;
 }
